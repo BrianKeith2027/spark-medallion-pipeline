@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# Data files
+*.csv
+*.parquet
+medallion_lakehouse/
+gold_*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
