@@ -1,0 +1,83 @@
+# Spark Medallion Pipeline Configuration
+# Author: Brian Stratton
+
+pipeline:
+  name: medallion-transaction-pipeline
+  version: "1.0"
+
+paths:
+  base: "./medallion_lakehouse"
+  bronze: "./medallion_lakehouse/bronze/transactions"
+  silver: "./medallion_lakehouse/silver/transactions"
+  gold:
+    daily_summary: "./medallion_lakehouse/gold/daily_summary"
+    customer_metrics: "./medallion_lakehouse/gold/customer_metrics"
+    product_metrics: "./medallion_lakehouse/gold/product_metrics"
+
+bronze:
+  source_system: "transaction_system"
+  file_format: "parquet"
+  metadata_columns:
+    - _ingestion_timestamp
+    - _source_system
+    - _file_name
+
+silver:
+  standardization:
+    customer_id:
+      case: upper
+      remove_chars: "-_"
+    product_name:
+      case: title
+    region:
+      case: title
+    status:
+      case: lower
+  null_handling:
+    discount_pct: 0
+  derived_columns:
+    gross_amount: "quantity * unit_price"
+    discount_amount: "gross_amount * (discount_pct / 100)"
+    net_amount: "gross_amount - discount_amount"
+  date_formats:
+    - "%Y-%m-%d"
+    - "%m/%d/%Y"
+    - "%d-%m-%Y"
+    - "%Y/%m/%d"
+
+gold:
+  filter_status: "completed"
+  daily_summary:
+    group_by:
+      - transaction_date
+      - region
+    aggregations:
+      total_transactions: count
+      total_units: sum_quantity
+      gross_revenue: sum_gross_amount
+      net_revenue: sum_net_amount
+  customer_metrics:
+    group_by:
+      - customer_id
+    aggregations:
+      total_orders: count
+      total_spend: sum_net_amount
+      avg_order_value: mean_net_amount
+  product_metrics:
+    group_by:
+      - product_name
+    aggregations:
+      total_orders: count
+      total_revenue: sum_net_amount
+      avg_unit_price: mean_unit_price
+
+quality:
+  checks:
+    - null_percentage
+    - unique_values
+    - date_range
+    - numeric_range
+    - standardization_check
+  thresholds:
+    max_null_pct: 25
+    min_records: 100
